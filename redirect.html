@@ -1,204 +1,175 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Redirection...</title>
-    <style>
-        body { 
-            font-family: Arial, sans-serif; 
-            margin: 0;
-            padding: 20px;
-            background: #ffffff;
-        }
-        
-        .debug-info {
-            background: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: 6px;
-            padding: 15px;
-            margin-bottom: 20px;
-            font-family: monospace;
-            font-size: 12px;
-        }
-        
-        .loader {
-            width: 20px;
-            height: 20px;
-            border: 2px solid #f3f3f3;
-            border-top: 2px solid #4f46e5;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 20px auto;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        .error-page {
-            text-align: center;
-            padding: 20px;
-            max-width: 600px;
-            margin: 0 auto;
-        }
-        
-        .error-page h2 {
-            color: #dc2626;
-        }
-        
-        .success {
-            color: #059669;
-            font-weight: bold;
-        }
-        
-        .error {
-            color: #dc2626;
-            font-weight: bold;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Redirection...</title>
+  <style>
+    body { 
+      font-family: Arial, sans-serif; 
+      margin: 0;
+      padding: 20px;
+      background: #ffffff;
+    }
+    .debug-info {
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 6px;
+      padding: 15px;
+      margin-bottom: 20px;
+      font-family: monospace;
+      font-size: 12px;
+    }
+    .loader {
+      width: 20px;
+      height: 20px;
+      border: 2px solid #f3f3f3;
+      border-top: 2px solid #4f46e5;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 20px auto;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .error-page {
+      text-align: center;
+      padding: 20px;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    .error-page h2 {
+      color: #dc2626;
+    }
+    .success {
+      color: #059669;
+      font-weight: bold;
+    }
+    .error {
+      color: #dc2626;
+      font-weight: bold;
+    }
+  </style>
 </head>
 <body>
-    <div class="error-page">
-        <h2 style="display: none;" id="debugTitle">🔍 Debug Mode - QR Code Redirect</h2>
-        <h2 style="display: none;" id="loadingTitle">🔄 Redirection...</h2>
-        
-        <div class="debug-info" id="debugInfo" style="display: none;">
-            <div>Initialisation...</div>
-        </div>
-        
-        <div class="loader" id="loader"></div>
-        
-        <div id="result"></div>
+  <div class="error-page">
+    <h2 style="display: none;" id="debugTitle">🔍 Debug Mode - QR Code Redirect</h2>
+    <h2 style="display: none;" id="loadingTitle">🔄 Redirection...</h2>
+    
+    <div class="debug-info" id="debugInfo" style="display: none;">
+      <div>Initialisation...</div>
     </div>
     
-    <script>
-        // Configuration
-        const DEBUG_MODE = window.location.search.includes('debug=true'); // Debug seulement si ?debug=true dans l'URL
-        
-        // Récupérer l'ID depuis l'URL
-        const urlParams = new URLSearchParams(window.location.search);
-        const redirectId = urlParams.get('id');
-        
-        // Fonction de debug
-        function log(message, type = 'info') {
-            if (!DEBUG_MODE) return; // Pas de logs en mode production
-            
-            const debugDiv = document.getElementById('debugInfo');
-            const timestamp = new Date().toLocaleTimeString();
-            const color = type === 'error' ? '#dc2626' : type === 'success' ? '#059669' : '#000';
-            debugDiv.innerHTML += `<div style="color: ${color}">[${timestamp}] ${message}</div>`;
-            console.log(`[REDIRECT DEBUG] ${message}`);
+    <div class="loader" id="loader"></div>
+    
+    <div id="result"></div>
+  </div>
+
+  <script>
+    // Mode debug activé si ?debug=true
+    const DEBUG_MODE = window.location.search.includes('debug=true');
+    const urlParams = new URLSearchParams(window.location.search);
+    const redirectId = urlParams.get('id');
+
+    function log(message, type = 'info') {
+      if (!DEBUG_MODE) return;
+      const debugDiv = document.getElementById('debugInfo');
+      const timestamp = new Date().toLocaleTimeString();
+      const color = type === 'error' ? '#dc2626' : type === 'success' ? '#059669' : '#000';
+      debugDiv.innerHTML += `<div style="color:${color}">[${timestamp}] ${message}</div>`;
+      console.log(`[REDIRECT DEBUG] ${message}`);
+    }
+
+    function initInterface() {
+      if (DEBUG_MODE) {
+        document.getElementById('debugTitle').style.display = 'block';
+        document.getElementById('debugInfo').style.display = 'block';
+      } else {
+        document.getElementById('loadingTitle').style.display = 'block';
+        document.body.style.display = 'flex';
+        document.body.style.alignItems = 'center';
+        document.body.style.justifyContent = 'center';
+        document.body.style.minHeight = '100vh';
+        document.body.style.padding = '0';
+      }
+    }
+
+    function showResult(message, isSuccess = false) {
+      document.getElementById('loader').style.display = 'none';
+      const resultDiv = document.getElementById('result');
+      resultDiv.innerHTML = `<div class="${isSuccess ? 'success' : 'error'}">${message}</div>`;
+    }
+
+    function performRedirect(url) {
+      log(`🚀 Redirection vers: ${url}`, 'success');
+      if (DEBUG_MODE) {
+        showResult(`Redirection vers: ${url}`, true);
+        setTimeout(() => {
+          const link = document.createElement('a');
+          link.href = url;
+          link.textContent = `Cliquer ici pour aller sur ${url}`;
+          link.style.display = 'block';
+          link.style.marginTop = '20px';
+          link.style.color = '#4f46e5';
+          document.getElementById('result').appendChild(link);
+        }, 1000);
+      } else {
+        window.location.replace(url);
+      }
+    }
+
+    // Résolution de la redirection
+    async function resolveRedirect() {
+      log('🔍 Début de la résolution');
+      log(`📍 URL actuelle: ${window.location.href}`);
+      log(`🆔 ID extrait: ${redirectId || 'AUCUN'}`);
+
+      if (!redirectId) {
+        log('❌ Aucun ID trouvé', 'error');
+        showResult('❌ ID manquant dans l’URL');
+        return;
+      }
+
+      try {
+        // 1. Vérifier localStorage
+        const localRedirects = JSON.parse(localStorage.getItem('qrRedirects') || '{}');
+        if (localRedirects[redirectId]) {
+          log(`✅ Trouvé dans localStorage: ${localRedirects[redirectId]}`, 'success');
+          performRedirect(localRedirects[redirectId]);
+          return;
         }
-        
-        // Initialiser l'interface selon le mode
-        function initInterface() {
-            if (DEBUG_MODE) {
-                document.getElementById('debugTitle').style.display = 'block';
-                document.getElementById('debugInfo').style.display = 'block';
-            } else {
-                document.getElementById('loadingTitle').style.display = 'block';
-                // Interface minimale en mode production
-                document.body.style.display = 'flex';
-                document.body.style.alignItems = 'center';
-                document.body.style.justifyContent = 'center';
-                document.body.style.minHeight = '100vh';
-                document.body.style.padding = '0';
-            }
+
+        // 2. Vérifier JSON (redirects.json seulement)
+        log('🔍 Tentative de chargement de redirects.json...');
+        const response = await fetch('redirects.json');
+        log(`📡 Statut: ${response.status}`);
+        if (response.ok) {
+          const jsonRedirects = await response.json();
+          log(`📄 Contenu: ${JSON.stringify(jsonRedirects)}`);
+          if (jsonRedirects[redirectId]) {
+            log(`✅ Trouvé dans JSON: ${jsonRedirects[redirectId]}`, 'success');
+            performRedirect(jsonRedirects[redirectId]);
+            return;
+          } else {
+            log(`❌ ID '${redirectId}' non trouvé dans le JSON`, 'error');
+          }
+        } else {
+          log(`❌ Impossible de charger le JSON: ${response.status}`, 'error');
         }
-        
-        // Afficher le résultat final
-        function showResult(message, isSuccess = false) {
-            document.getElementById('loader').style.display = 'none';
-            const resultDiv = document.getElementById('result');
-            resultDiv.innerHTML = `<div class="${isSuccess ? 'success' : 'error'}">${message}</div>`;
-        }
-        
-        // Fonction de redirection
-        function performRedirect(url) {
-            log(`🚀 Redirection vers: ${url}`, 'success');
-            
-            if (DEBUG_MODE) {
-                showResult(`Redirection vers: ${url}`, true);
-                // En mode debug, on ne redirige pas automatiquement
-                setTimeout(() => {
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.textContent = `Cliquer ici pour aller sur ${url}`;
-                    link.style.display = 'block';
-                    link.style.marginTop = '20px';
-                    link.style.color = '#4f46e5';
-                    document.getElementById('result').appendChild(link);
-                }, 1000);
-            } else {
-                // Mode production : redirection immédiate et invisible
-                window.location.replace(url);
-            }
-        }
-        
-        // Résolution de la redirection
-        async function resolveRedirect() {
-            log('🔍 Début de la résolution de redirection');
-            log(`📍 URL actuelle: ${window.location.href}`);
-            log(`🆔 ID extrait: ${redirectId || 'AUCUN'}`);
-            
-            if (!redirectId) {
-                log('❌ Aucun ID trouvé dans l\'URL', 'error');
-                showResult('❌ ID de redirection manquant dans l\'URL');
-                return;
-            }
-            
-            try {
-                // 1. Vérifier localStorage
-                log('🔍 Vérification du localStorage...');
-                const localRedirects = JSON.parse(localStorage.getItem('qrRedirects') || '{}');
-                log(`📦 LocalStorage contient: ${JSON.stringify(localRedirects)}`);
-                
-                if (localRedirects[redirectId]) {
-                    log(`✅ Trouvé dans localStorage: ${localRedirects[redirectId]}`, 'success');
-                    performRedirect(localRedirects[redirectId]);
-                    return;
-                }
-                
-                // 2. Vérifier le fichier JSON
-                log('🔍 Tentative de chargement de redirects.json...');
-                const jsonUrl = `${window.location.origin}${window.location.pathname.replace('redirect.html', '')}redirects.json`;
-                log(`📂 URL du JSON: ${jsonUrl}`);
-                
-                const response = await fetch(jsonUrl);
-                log(`📡 Statut de la requête: ${response.status} ${response.statusText}`);
-                
-                if (response.ok) {
-                    const jsonRedirects = await response.json();
-                    log(`📄 Contenu du JSON: ${JSON.stringify(jsonRedirects)}`);
-                    
-                    if (jsonRedirects[redirectId]) {
-                        log(`✅ Trouvé dans JSON: ${jsonRedirects[redirectId]}`, 'success');
-                        performRedirect(jsonRedirects[redirectId]);
-                        return;
-                    } else {
-                        log(`❌ ID '${redirectId}' non trouvé dans le JSON`, 'error');
-                        log(`🔑 IDs disponibles: ${Object.keys(jsonRedirects).join(', ')}`, 'error');
-                    }
-                } else {
-                    log(`❌ Impossible de charger le JSON: ${response.status}`, 'error');
-                }
-                
-                // 3. Aucune redirection trouvée
-                log('❌ Aucune redirection trouvée', 'error');
-                showResult(`❌ Lien '${redirectId}' non trouvé`);
-                
-            } catch (error) {
-                log(`❌ Erreur: ${error.message}`, 'error');
-                showResult(`❌ Erreur technique: ${error.message}`);
-            }
-        }
-        
-        // Démarrer la résolution
-        initInterface();
-        log('🚀 Démarrage du système de redirection');
-        resolveRedirect();
-    </script>
+
+        // 3. Rien trouvé
+        log(`❌ ID '${redirectId}' non trouvé`, 'error');
+        showResult(`❌ Lien '${redirectId}' non trouvé`);
+
+      } catch (error) {
+        log(`❌ Erreur globale: ${error.message}`, 'error');
+        showResult(`❌ Erreur technique: ${error.message}`);
+      }
+    }
+
+    initInterface();
+    resolveRedirect();
+  </script>
 </body>
 </html>
