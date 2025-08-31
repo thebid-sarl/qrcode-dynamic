@@ -61,9 +61,10 @@
 </head>
 <body>
     <div class="error-page">
-        <h2>🔍 Debug Mode - QR Code Redirect</h2>
+        <h2 style="display: none;" id="debugTitle">🔍 Debug Mode - QR Code Redirect</h2>
+        <h2 style="display: none;" id="loadingTitle">🔄 Redirection...</h2>
         
-        <div class="debug-info" id="debugInfo">
+        <div class="debug-info" id="debugInfo" style="display: none;">
             <div>Initialisation...</div>
         </div>
         
@@ -74,7 +75,7 @@
     
     <script>
         // Configuration
-        const DEBUG_MODE = true; // Mode debug activé
+        const DEBUG_MODE = window.location.search.includes('debug=true'); // Debug seulement si ?debug=true dans l'URL
         
         // Récupérer l'ID depuis l'URL
         const urlParams = new URLSearchParams(window.location.search);
@@ -82,11 +83,29 @@
         
         // Fonction de debug
         function log(message, type = 'info') {
+            if (!DEBUG_MODE) return; // Pas de logs en mode production
+            
             const debugDiv = document.getElementById('debugInfo');
             const timestamp = new Date().toLocaleTimeString();
             const color = type === 'error' ? '#dc2626' : type === 'success' ? '#059669' : '#000';
             debugDiv.innerHTML += `<div style="color: ${color}">[${timestamp}] ${message}</div>`;
             console.log(`[REDIRECT DEBUG] ${message}`);
+        }
+        
+        // Initialiser l'interface selon le mode
+        function initInterface() {
+            if (DEBUG_MODE) {
+                document.getElementById('debugTitle').style.display = 'block';
+                document.getElementById('debugInfo').style.display = 'block';
+            } else {
+                document.getElementById('loadingTitle').style.display = 'block';
+                // Interface minimale en mode production
+                document.body.style.display = 'flex';
+                document.body.style.alignItems = 'center';
+                document.body.style.justifyContent = 'center';
+                document.body.style.minHeight = '100vh';
+                document.body.style.padding = '0';
+            }
         }
         
         // Afficher le résultat final
@@ -99,13 +118,9 @@
         // Fonction de redirection
         function performRedirect(url) {
             log(`🚀 Redirection vers: ${url}`, 'success');
-            showResult(`Redirection vers: ${url}`, true);
             
-            if (!DEBUG_MODE) {
-                setTimeout(() => {
-                    window.location.replace(url);
-                }, 2000);
-            } else {
+            if (DEBUG_MODE) {
+                showResult(`Redirection vers: ${url}`, true);
                 // En mode debug, on ne redirige pas automatiquement
                 setTimeout(() => {
                     const link = document.createElement('a');
@@ -116,6 +131,9 @@
                     link.style.color = '#4f46e5';
                     document.getElementById('result').appendChild(link);
                 }, 1000);
+            } else {
+                // Mode production : redirection immédiate et invisible
+                window.location.replace(url);
             }
         }
         
@@ -178,6 +196,7 @@
         }
         
         // Démarrer la résolution
+        initInterface();
         log('🚀 Démarrage du système de redirection');
         resolveRedirect();
     </script>
