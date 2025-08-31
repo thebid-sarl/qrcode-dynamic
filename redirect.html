@@ -8,21 +8,28 @@
         body { 
             font-family: Arial, sans-serif; 
             margin: 0;
-            padding: 0;
+            padding: 20px;
             background: #ffffff;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
         }
         
-        .hidden-loader {
+        .debug-info {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 20px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        
+        .loader {
             width: 20px;
             height: 20px;
             border: 2px solid #f3f3f3;
             border-top: 2px solid #4f46e5;
             border-radius: 50%;
             animation: spin 1s linear infinite;
+            margin: 20px auto;
         }
         
         @keyframes spin {
@@ -33,126 +40,146 @@
         .error-page {
             text-align: center;
             padding: 20px;
-            max-width: 400px;
-            display: none;
+            max-width: 600px;
+            margin: 0 auto;
         }
         
         .error-page h2 {
             color: #dc2626;
-            margin-bottom: 10px;
         }
         
-        .error-page p {
-            color: #6b7280;
-            margin-bottom: 20px;
+        .success {
+            color: #059669;
+            font-weight: bold;
         }
         
-        .btn {
-            display: inline-block;
-            background: #4f46e5;
-            color: white;
-            padding: 10px 20px;
-            text-decoration: none;
-            border-radius: 6px;
-            font-weight: 500;
+        .error {
+            color: #dc2626;
+            font-weight: bold;
         }
     </style>
 </head>
 <body>
-    <!-- Loader minimal pendant la redirection -->
-    <div class="hidden-loader" id="loader"></div>
-    
-    <!-- Page d'erreur (cachée par défaut) -->
-    <div class="error-page" id="errorPage">
-        <h2>⚠️ Lien non trouvé</h2>
-        <p>Ce lien QR code n'est plus valide ou a expiré.</p>
-        <a href="https://github.com" class="btn">Retour</a>
+    <div class="error-page">
+        <h2>🔍 Debug Mode - QR Code Redirect</h2>
+        
+        <div class="debug-info" id="debugInfo">
+            <div>Initialisation...</div>
+        </div>
+        
+        <div class="loader" id="loader"></div>
+        
+        <div id="result"></div>
     </div>
     
     <script>
         // Configuration
-        const REDIRECT_DELAY = 0; // Redirection immédiate (0ms)
-        const ERROR_TIMEOUT = 5000; // Afficher erreur après 5s si problème
+        const DEBUG_MODE = true; // Mode debug activé
         
         // Récupérer l'ID depuis l'URL
         const urlParams = new URLSearchParams(window.location.search);
         const redirectId = urlParams.get('id');
         
-        // Fonction de redirection immédiate
-        function immediateRedirect(url) {
-            // Redirection immédiate sans délai visible
-            window.location.replace(url);
+        // Fonction de debug
+        function log(message, type = 'info') {
+            const debugDiv = document.getElementById('debugInfo');
+            const timestamp = new Date().toLocaleTimeString();
+            const color = type === 'error' ? '#dc2626' : type === 'success' ? '#059669' : '#000';
+            debugDiv.innerHTML += `<div style="color: ${color}">[${timestamp}] ${message}</div>`;
+            console.log(`[REDIRECT DEBUG] ${message}`);
         }
         
-        // Afficher la page d'erreur
-        function showError() {
+        // Afficher le résultat final
+        function showResult(message, isSuccess = false) {
             document.getElementById('loader').style.display = 'none';
-            document.getElementById('errorPage').style.display = 'block';
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = `<div class="${isSuccess ? 'success' : 'error'}">${message}</div>`;
+        }
+        
+        // Fonction de redirection
+        function performRedirect(url) {
+            log(`🚀 Redirection vers: ${url}`, 'success');
+            showResult(`Redirection vers: ${url}`, true);
+            
+            if (!DEBUG_MODE) {
+                setTimeout(() => {
+                    window.location.replace(url);
+                }, 2000);
+            } else {
+                // En mode debug, on ne redirige pas automatiquement
+                setTimeout(() => {
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.textContent = `Cliquer ici pour aller sur ${url}`;
+                    link.style.display = 'block';
+                    link.style.marginTop = '20px';
+                    link.style.color = '#4f46e5';
+                    document.getElementById('result').appendChild(link);
+                }, 1000);
+            }
         }
         
         // Résolution de la redirection
         async function resolveRedirect() {
+            log('🔍 Début de la résolution de redirection');
+            log(`📍 URL actuelle: ${window.location.href}`);
+            log(`🆔 ID extrait: ${redirectId || 'AUCUN'}`);
+            
             if (!redirectId) {
-                setTimeout(showError, 1000);
+                log('❌ Aucun ID trouvé dans l\'URL', 'error');
+                showResult('❌ ID de redirection manquant dans l\'URL');
                 return;
             }
             
             try {
-                // 1. Essayer localStorage (pour redirections locales)
+                // 1. Vérifier localStorage
+                log('🔍 Vérification du localStorage...');
                 const localRedirects = JSON.parse(localStorage.getItem('qrRedirects') || '{}');
+                log(`📦 LocalStorage contient: ${JSON.stringify(localRedirects)}`);
+                
                 if (localRedirects[redirectId]) {
-                    immediateRedirect(localRedirects[redirectId]);
+                    log(`✅ Trouvé dans localStorage: ${localRedirects[redirectId]}`, 'success');
+                    performRedirect(localRedirects[redirectId]);
                     return;
                 }
                 
-                // 2. Essayer le fichier JSON centralisé
-                const response = await fetch('redirects.json');
+                // 2. Vérifier le fichier JSON
+                log('🔍 Tentative de chargement de redirects.json...');
+                const jsonUrl = `${window.location.origin}${window.location.pathname.replace('redirect.html', '')}redirects.json`;
+                log(`📂 URL du JSON: ${jsonUrl}`);
+                
+                const response = await fetch(jsonUrl);
+                log(`📡 Statut de la requête: ${response.status} ${response.statusText}`);
+                
                 if (response.ok) {
                     const jsonRedirects = await response.json();
+                    log(`📄 Contenu du JSON: ${JSON.stringify(jsonRedirects)}`);
+                    
                     if (jsonRedirects[redirectId]) {
-                        immediateRedirect(jsonRedirects[redirectId]);
+                        log(`✅ Trouvé dans JSON: ${jsonRedirects[redirectId]}`, 'success');
+                        performRedirect(jsonRedirects[redirectId]);
                         return;
+                    } else {
+                        log(`❌ ID '${redirectId}' non trouvé dans le JSON`, 'error');
+                        log(`🔑 IDs disponibles: ${Object.keys(jsonRedirects).join(', ')}`, 'error');
                     }
+                } else {
+                    log(`❌ Impossible de charger le JSON: ${response.status}`, 'error');
                 }
                 
                 // 3. Aucune redirection trouvée
-                setTimeout(showError, 1000);
+                log('❌ Aucune redirection trouvée', 'error');
+                showResult(`❌ Lien '${redirectId}' non trouvé`);
                 
             } catch (error) {
-                console.error('Erreur de redirection:', error);
-                
-                // Fallback: vérifier localStorage une dernière fois
-                const localRedirects = JSON.parse(localStorage.getItem('qrRedirects') || '{}');
-                if (localRedirects[redirectId]) {
-                    immediateRedirect(localRedirects[redirectId]);
-                } else {
-                    setTimeout(showError, 1000);
-                }
+                log(`❌ Erreur: ${error.message}`, 'error');
+                showResult(`❌ Erreur technique: ${error.message}`);
             }
         }
         
-        // Démarrer la résolution immédiatement
+        // Démarrer la résolution
+        log('🚀 Démarrage du système de redirection');
         resolveRedirect();
-        
-        // Timeout de sécurité : afficher erreur si rien ne se passe
-        setTimeout(() => {
-            if (document.getElementById('loader').style.display !== 'none') {
-                showError();
-            }
-        }, ERROR_TIMEOUT);
-        
-        // Empêcher l'historique de navigation (pour une redirection plus propre)
-        if (window.history && window.history.replaceState) {
-            window.history.replaceState({}, document.title, window.location.pathname);
-        }
     </script>
-    
-    <!-- Fallback si JavaScript désactivé -->
-    <noscript>
-        <div style="text-align: center; padding: 50px;">
-            <h2>JavaScript requis</h2>
-            <p>Ce lien nécessite JavaScript pour fonctionner.</p>
-        </div>
-    </noscript>
 </body>
 </html>
