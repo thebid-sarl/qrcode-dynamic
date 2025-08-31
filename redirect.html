@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Redirection...</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            text-align: center; 
+            padding: 50px; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            max-width: 400px;
+            width: 90%;
+        }
+        
+        .loader { 
+            border: 4px solid #f3f3f3; 
+            border-top: 4px solid #4f46e5; 
+            border-radius: 50%; 
+            width: 50px; 
+            height: 50px; 
+            animation: spin 1s linear infinite; 
+            margin: 20px auto; 
+        }
+        
+        @keyframes spin { 
+            0% { transform: rotate(0deg); } 
+            100% { transform: rotate(360deg); } 
+        }
+        
+        h2 {
+            color: #4f46e5;
+            margin-bottom: 10px;
+            font-size: 1.5rem;
+        }
+        
+        #status {
+            color: #6b7280;
+            font-size: 1rem;
+            margin-top: 20px;
+            line-height: 1.5;
+        }
+        
+        .success {
+            color: #059669 !important;
+        }
+        
+        .error {
+            color: #dc2626 !important;
+        }
+        
+        .redirect-info {
+            background: #f8fafc;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+            word-break: break-all;
+            font-size: 0.9rem;
+            color: #4b5563;
+        }
+        
+        .footer {
+            margin-top: 30px;
+            font-size: 0.8rem;
+            color: #9ca3af;
+        }
+        
+        @media (max-width: 480px) {
+            .container {
+                padding: 30px 20px;
+            }
+            
+            h2 {
+                font-size: 1.3rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>🔄 Redirection en cours...</h2>
+        <div class="loader"></div>
+        <p id="status">Chargement de la destination...</p>
+        <div id="redirect-info" class="redirect-info" style="display: none;"></div>
+        <div class="footer">
+            Système de QR Code Dynamique
+        </div>
+    </div>
+    
+    <script>
+        // Récupérer l'ID depuis l'URL (ex: redirect.html?id=abc123)
+        const urlParams = new URLSearchParams(window.location.search);
+        const redirectId = urlParams.get('id');
+        
+        // Fonction pour afficher les messages
+        function updateStatus(message, type = 'info') {
+            const statusElement = document.getElementById('status');
+            statusElement.innerHTML = message;
+            statusElement.className = type;
+        }
+        
+        // Fonction pour afficher les informations de redirection
+        function showRedirectInfo(url) {
+            const infoElement = document.getElementById('redirect-info');
+            infoElement.innerHTML = `<strong>Destination :</strong><br>${url}`;
+            infoElement.style.display = 'block';
+        }
+
+        // Fonction pour rediriger avec compte à rebours
+        function redirectWithCountdown(targetUrl) {
+            updateStatus('✅ Destination trouvée ! Redirection dans 3 secondes...', 'success');
+            showRedirectInfo(targetUrl);
+            
+            let countdown = 3;
+            const countdownInterval = setInterval(() => {
+                countdown--;
+                if (countdown > 0) {
+                    updateStatus(`✅ Redirection dans ${countdown} seconde${countdown > 1 ? 's' : ''}...`, 'success');
+                } else {
+                    clearInterval(countdownInterval);
+                    updateStatus('🚀 Redirection en cours...', 'success');
+                    setTimeout(() => {
+                        window.location.href = targetUrl;
+                    }, 500);
+                }
+            }, 1000);
+        }
+
+        // Fonction principale de résolution
+        async function resolveRedirect() {
+            if (!redirectId) {
+                updateStatus('❌ ID de redirection manquant dans l\'URL', 'error');
+                document.querySelector('.loader').style.display = 'none';
+                return;
+            }
+
+            try {
+                // 1. Essayer d'abord le localStorage (pour les redirections locales)
+                const localRedirects = JSON.parse(localStorage.getItem('qrRedirects') || '{}');
+                if (localRedirects[redirectId]) {
+                    redirectWithCountdown(localRedirects[redirectId]);
+                    return;
+                }
+
+                // 2. Ensuite essayer le fichier JSON centralisé
+                updateStatus('🔍 Recherche de la redirection...', 'info');
+                
+                const response = await fetch('redirects.json');
+                if (response.ok) {
+                    const jsonRedirects = await response.json();
+                    if (jsonRedirects[redirectId]) {
+                        redirectWithCountdown(jsonRedirects[redirectId]);
+                        return;
+                    }
+                }
+
+                // 3. Aucune redirection trouvée
+                updateStatus('❌ Lien non trouvé ou expiré', 'error');
+                document.querySelector('.loader').style.display = 'none';
+                
+                // Afficher des infos de debug après 2 secondes
+                setTimeout(() => {
+                    showDebugInfo();
+                }, 2000);
+
+            } catch (error) {
+                console.error('Erreur lors de la résolution:', error);
+                updateStatus('❌ Erreur technique lors du chargement', 'error');
+                document.querySelector('.loader').style.display = 'none';
+                
+                // Fallback: essayer quand même localStorage
+                const localRedirects = JSON.parse(localStorage.getItem('qrRedirects') || '{}');
+                if (localRedirects[redirectId]) {
+                    setTimeout(() => {
+                        updateStatus('💡 Redirection trouvée en local...', 'success');
+                        redirectWithCountdown(localRedirects[redirectId]);
+                    }, 1000);
+                } else {
+                    setTimeout(() => showDebugInfo(), 2000);
+                }
+            }
+        }
+
+        // Afficher les informations de debug
+        function showDebugInfo() {
+            const debugInfo = document.createElement('div');
+            debugInfo.style.marginTop = '20px';
+            debugInfo.style.fontSize = '0.8rem';
+            debugInfo.style.color = '#6b7280';
+            debugInfo.style.textAlign = 'left';
+            debugInfo.innerHTML = `
+                <hr style="margin: 20px 0; border: none; border-top: 1px solid #e5e7eb;">
+                <strong>🔍 Informations de debug :</strong><br>
+                • ID recherché : <code>${redirectId}</code><br>
+                • URL actuelle : <code>${window.location.href}</code><br>
+                • Fichier JSON vérifié : <code>redirects.json</code><br>
+                • LocalStorage vérifié : Oui<br>
+                <br>
+                <small>💡 Vérifiez que l'ID existe dans votre système de gestion ou dans le fichier redirects.json</small>
+            `;
+            document.querySelector('.container').appendChild(debugInfo);
+        }
+        
+        // Démarrer la résolution au chargement
+        document.addEventListener('DOMContentLoaded', () => {
+            resolveRedirect();
+        });
+        
+        // Gestion des erreurs globales
+        window.addEventListener('error', function(e) {
+            console.error('Erreur détectée:', e);
+            updateStatus('❌ Une erreur technique est survenue', 'error');
+            document.querySelector('.loader').style.display = 'none';
+        });
+
+        // Ajouter un lien de retour après 10 secondes si erreur
+        setTimeout(() => {
+            const currentStatus = document.getElementById('status').className;
+            if (currentStatus === 'error') {
+                const backLink = document.createElement('div');
+                backLink.style.marginTop = '20px';
+                backLink.innerHTML = `
+                    <hr style="margin: 20px 0; border: none; border-top: 1px solid #e5e7eb;">
+                    <p style="font-size: 0.9rem; color: #6b7280;">
+                        Vous pouvez retourner à la page principale :
+                    </p>
+                    <a href="index.html" style="
+                        display: inline-block;
+                        background: #4f46e5;
+                        color: white;
+                        padding: 10px 20px;
+                        border-radius: 8px;
+                        text-decoration: none;
+                        margin-top: 10px;
+                        font-weight: 600;
+                    ">🏠 Retour à l'accueil</a>
+                `;
+                document.querySelector('.container').appendChild(backLink);
+            }
+        }, 10000);
+    </script>
+    
+    <noscript>
+        <div style="
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        ">
+            <div style="text-align: center; padding: 40px;">
+                <h2 style="color: #dc2626;">⚠️ JavaScript requis</h2>
+                <p>Cette page nécessite JavaScript pour fonctionner.</p>
+                <p>Veuillez activer JavaScript dans votre navigateur.</p>
+                <a href="index.html" style="
+                    display: inline-block;
+                    background: #4f46e5;
+                    color: white;
+                    padding: 12px 24px;
+                    border-radius: 8px;
+                    text-decoration: none;
+                    margin-top: 20px;
+                ">Retour à l'accueil</a>
+            </div>
+        </div>
+    </noscript>
+</body>
+</html>

@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Code Dynamique - Générateur</title>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .tabs {
+            display: flex;
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 20px;
+            text-align: center;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .tab.active {
+            background: white;
+            color: #4f46e5;
+            border-bottom: 3px solid #4f46e5;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            padding: 40px;
+        }
+
+        .form-section {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-group label {
+            font-weight: 600;
+            color: #374151;
+            font-size: 0.95rem;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            padding: 12px 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        .form-group small {
+            color: #6b7280;
+            font-size: 0.85rem;
+        }
+
+        .color-input-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .color-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .color-wrapper input[type="color"] {
+            width: 50px;
+            height: 40px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .file-input-wrapper input[type="file"] {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .file-input-label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 12px 16px;
+            background: #f3f4f6;
+            border: 2px dashed #d1d5db;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .file-input-label:hover {
+            background: #e5e7eb;
+            border-color: #4f46e5;
+        }
+
+        .image-preview {
+            max-width: 100px;
+            max-height: 100px;
+            border-radius: 8px;
+            margin-top: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .advanced-options {
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 12px;
+            border-left: 4px solid #4f46e5;
+        }
+
+        .advanced-options h3 {
+            margin-bottom: 15px;
+            color: #4f46e5;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(79, 70, 229, 0.3);
+        }
+
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 0.8rem;
+        }
+
+        .preview-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .qr-preview {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            text-align: center;
+        }
+
+        #qrCanvas {
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .download-section {
+            display: flex;
+            gap: 15px;
+        }
+
+        .redirect-list {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+            grid-column: 1 / -1;
+        }
+
+        .redirect-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .redirect-info {
+            flex: 1;
+        }
+
+        .redirect-id {
+            font-family: monospace;
+            background: #e2e8f0;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            font-weight: bold;
+        }
+
+        .redirect-url {
+            color: #6b7280;
+            margin-top: 5px;
+            word-break: break-all;
+        }
+
+        .redirect-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            grid-column: 1 / -1;
+        }
+
+        .alert-info {
+            background: #dbeafe;
+            color: #1e40af;
+            border: 1px solid #93c5fd;
+        }
+
+        .alert-success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #6ee7b7;
+        }
+
+        .copy-field {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .copy-field input {
+            flex: 1;
+        }
+
+        .redirect-url-display {
+            font-family: monospace;
+            background: #f3f4f6;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #d1d5db;
+            word-break: break-all;
+            flex: 1;
+        }
+
+        @media (max-width: 768px) {
+            .tab-content.active {
+                grid-template-columns: 1fr;
+                gap: 30px;
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .download-section {
+                flex-direction: column;
+            }
+            
+            .redirect-item {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+            
+            .redirect-actions {
+                justify-content: center;
+            }
+
+            .copy-field {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 QR Codes Dynamiques</h1>
+            <p>Créez des QR codes modifiables avec logo - Gratuit et sans limite</p>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" data-tab="create">Créer QR Code</button>
+            <button class="tab" data-tab="manage">Gérer les Liens</button>
+        </div>
+
+        <!-- Onglet Création -->
+        <div class="tab-content active" id="create">
+            <div class="form-section">
+                <div class="alert alert-info">
+                    <strong>💡 Comment ça marche :</strong><br>
+                    1. Créez un lien de redirection avec un ID unique<br>
+                    2. Le QR code pointera vers votre domaine + cet ID<br>
+                    3. Vous pourrez changer la destination sans changer le QR code
+                </div>
+
+                <div class="form-group">
+                    <label for="baseUrl">URL de base de votre site</label>
+                    <input type="url" id="baseUrl" value="" placeholder="https://votrenom.github.io/qr-redirect">
+                    <small>L'URL où vous avez hébergé le fichier redirect.html</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="redirectId">ID du lien (optionnel)</label>
+                    <input type="text" id="redirectId" placeholder="Laissez vide pour un ID automatique">
+                    <small>Exemple: promo2024, contact-jean, etc.</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="targetUrl">URL de destination</label>
+                    <input type="url" id="targetUrl" placeholder="https://example.com" required>
+                    <small>L'URL vers laquelle le QR code doit rediriger</small>
+                </div>
+
+                <div class="advanced-options">
+                    <h3>🎨 Personnalisation</h3>
+                    
+                    <div class="form-group">
+                        <label for="logoFile">Logo central</label>
+                        <div class="file-input-wrapper">
+                            <input type="file" id="logoFile" accept="image/*">
+                            <label for="logoFile" class="file-input-label">
+                                📁 Choisir une image
+                            </label>
+                        </div>
+                        <img id="logoPreview" class="image-preview" style="display: none;">
+                    </div>
+
+                    <div class="color-input-group">
+                        <div class="form-group">
+                            <label>Couleur QR Code</label>
+                            <div class="color-wrapper">
+                                <input type="color" id="qrColor" value="#000000">
+                                <input type="text" id="qrColorText" value="#000000">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Couleur fond</label>
+                            <div class="color-wrapper">
+                                <input type="color" id="bgColor" value="#ffffff">
+                                <input type="text" id="bgColorText" value="#ffffff">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="qrSize">Taille (px)</label>
+                        <input type="range" id="qrSize" min="200" max="800" value="400">
+                        <span id="sizeValue">400px</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="logoSize">Taille du logo (%)</label>
+                        <input type="range" id="logoSize" min="5" max="30" value="15">
+                        <span id="logoSizeValue">15%</span>
+                    </div>
+                </div>
+
+                <button class="btn btn-primary" onclick="createRedirect()">🔗 Créer le QR Code Dynamique</button>
+
+                <div id="qrResult" style="display: none;">
+                    <div class="alert alert-success">
+                        <strong>✅ QR Code créé avec succès !</strong>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>URL de redirection (contenu du QR code)</label>
+                        <div class="copy-field">
+                            <div class="redirect-url-display" id="generatedUrl"></div>
+                            <button class="btn btn-primary btn-small" onclick="copyToClipboard('generatedUrl')">📋 Copier</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="preview-section">
+                <div class="qr-preview">
+                    <canvas id="qrCanvas"></canvas>
+                </div>
+                <div class="download-section">
+                    <button id="downloadBtn" class="btn btn-primary">💾 Télécharger PNG</button>
+                    <button id="regenerateBtn" class="btn btn-success">🔄 Régénérer</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Onglet Gestion -->
+        <div class="tab-content" id="manage">
+            <div class="form-section">
+                <div class="alert alert-info">
+                    <strong>📝 Gestion des redirections</strong><br>
+                    Ici vous pouvez modifier les destinations de vos QR codes existants.
+                </div>
+
+                <div class="form-group">
+                    <label for="editId">ID du lien à modifier</label>
+                    <input type="text" id="editId" placeholder="Entrez l'ID du lien">
+                </div>
+
+                <div class="form-group">
+                    <label for="newUrl">Nouvelle URL de destination</label>
+                    <input type="url" id="newUrl" placeholder="https://nouvelle-destination.com">
+                </div>
+
+                <button class="btn btn-success" onclick="updateRedirect()">🔄 Mettre à jour</button>
+            </div>
+
+            <div class="redirect-list" id="redirectList">
+                <h3>📋 Liens existants</h3>
+                <div id="redirectItems">
+                    <p style="color: #6b7280; text-align: center;">Aucun lien sauvegardé localement</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script QR Code avec fallback -->
+    <script>
+        // Variables globales
+        let redirects = JSON.parse(localStorage.getItem('qrRedirects') || '{}');
+        let logoImage = null;
+
+        // Attendre que QRCode soit chargé
+        function waitForQRCode() {
+            return new Promise((resolve) => {
+                if (typeof QRCode !== 'undefined') {
+                    resolve();
+                } else {
+                    const checkQRCode = setInterval(() => {
+                        if (typeof QRCode !== 'undefined') {
+                            clearInterval(checkQRCode);
+                            resolve();
+                        }
+                    }, 100);
+                    
+                    // Timeout après 5 secondes
+                    setTimeout(() => {
+                        clearInterval(checkQRCode);
+                        console.warn('QRCode library failed to load, using fallback');
+                        resolve();
+                    }, 5000);
+                }
+            });
+        }
+
+        // Gestion des onglets
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                const tabId = tab.dataset.tab;
+                
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+                
+                tab.classList.add('active');
+                document.getElementById(tabId).classList.add('active');
+                
+                if (tabId === 'manage') {
+                    displayRedirects();
+                }
+            });
+        });
+
+        // Initialisation des événements
+        document.addEventListener('DOMContentLoaded', async () => {
+            await waitForQRCode();
+            initializeEventListeners();
+            loadSettings();
+            generatePreviewQR();
+        });
+
+        function initializeEventListeners() {
+            // Synchronisation des couleurs
+            document.getElementById('qrColor').addEventListener('input', () => syncColorInputs('qr'));
+            document.getElementById('qrColorText').addEventListener('input', () => syncColorInputs('qrText'));
+            document.getElementById('bgColor').addEventListener('input', () => syncColorInputs('bg'));
+            document.getElementById('bgColorText').addEventListener('input', () => syncColorInputs('bgText'));
+            
+            // Mise à jour des affichages
+            document.getElementById('qrSize').addEventListener('input', updateSizeDisplay);
+            document.getElementById('logoSize').addEventListener('input', updateLogoSizeDisplay);
+            
+            // Upload de logo
+            document.getElementById('logoFile').addEventListener('change', handleLogoUpload);
+            
+            // Boutons
+            document.getElementById('downloadBtn').addEventListener('click', downloadQR);
+            document.getElementById('regenerateBtn').addEventListener('click', generatePreviewQR);
+            
+            // Génération en temps réel
+            ['qrColor', 'bgColor', 'qrSize', 'logoSize'].forEach(id => {
+                document.getElementById(id).addEventListener('input', generatePreviewQR);
+            });
+            
+            // Sauvegarde automatique de l'URL de base
+            document.getElementById('baseUrl').addEventListener('change', (e) => {
+                localStorage.setItem('baseUrl', e.target.value);
+            });
+        }
+
+        function loadSettings() {
+            const savedBaseUrl = localStorage.getItem('baseUrl');
+            if (savedBaseUrl) {
+                document.getElementById('baseUrl').value = savedBaseUrl;
+            }
+        }
+
+        function syncColorInputs(type) {
+            const colorInput = document.getElementById(type.includes('Text') ? type.replace('Text', '') : type);
+            const textInput = document.getElementById(type.includes('Text') ? type : type + 'Text');
+            
+            if (type.includes('Text')) {
+                // Validation du format hex
+                const hexValue = textInput.value;
+                if (/^#[0-9A-F]{6}$/i.test(hexValue)) {
+                    colorInput.value = hexValue;
+                } else {
+                    // Réinitialiser à la valeur du color input si format invalide
+                    textInput.value = colorInput.value;
+                }
+            } else {
+                textInput.value = colorInput.value;
+            }
+            
+            generatePreviewQR();
+        }
+
+        function updateSizeDisplay() {
+            const size = document.getElementById('qrSize').value;
+            document.getElementById('sizeValue').textContent = size + 'px';
+            generatePreviewQR();
+        }
+
+        function updateLogoSizeDisplay() {
+            const size = document.getElementById('logoSize').value;
+            document.getElementById('logoSizeValue').textContent = size + '%';
+            generatePreviewQR();
+        }
+
+        function handleLogoUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        logoImage = img;
+                        document.getElementById('logoPreview').src = e.target.result;
+                        document.getElementById('logoPreview').style.display = 'block';
+                        generatePreviewQR();
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            } else {
+                logoImage = null;
+                document.getElementById('logoPreview').style.display = 'none';
+                generatePreviewQR();
+            }
+        }
+
+        function generateId() {
+            return Math.random().toString(36).substring(2, 10);
+        }
+
+        async function createRedirect() {
+            const baseUrl = document.getElementById('baseUrl').value.replace(/\/$/, '');
+            const customId = document.getElementById('redirectId').value;
+            const targetUrl = document.getElementById('targetUrl').value;
+            
+            if (!baseUrl || !targetUrl) {
+                alert('❌ Veuillez remplir l\'URL de base et la destination');
+                return;
+            }
+            
+            const redirectId = customId || generateId();
+            const fullRedirectUrl = `${baseUrl}/redirect.html?id=${redirectId}`;
+            
+            // Sauvegarder localement
+            redirects[redirectId] = targetUrl;
+            localStorage.setItem('qrRedirects', JSON.stringify(redirects));
+            
+            // Sauvegarder aussi dans le JSON pour partage
+            await saveToJsonFile(redirectId, targetUrl);
+            
+            // Générer le QR avec cette URL
+            await generateQRCode(fullRedirectUrl);
+            
+            // Afficher les résultats
+            document.getElementById('generatedUrl').textContent = fullRedirectUrl;
+            document.getElementById('qrResult').style.display = 'block';
+            
+            // Mettre à jour la liste si on est sur l'onglet gestion
+            displayRedirects();
+            
+            // Reset
+            document.getElementById('redirectId').value = '';
+            document.getElementById('targetUrl').value = '';
+        }
+
+        // Fonction pour sauvegarder dans le fichier JSON (simulation)
+        async function saveToJsonFile(id, url) {
+            // Note: En vrai GitHub Pages, il faudrait utiliser GitHub API ou un autre service
+            // Ici on simule en affichant le JSON à copier-coller
+            console.log('À ajouter dans redirects.json:', JSON.stringify({[id]: url}, null, 2));
+        }
+
+        async function generateQRCode(content) {
+            const canvas = document.getElementById('qrCanvas');
+            const size = parseInt(document.getElementById('qrSize').value);
+            const qrColor = document.getElementById('qrColor').value;
+            const bgColor = document.getElementById('bgColor').value;
+            
+            canvas.width = size;
+            canvas.height = size;
+
+            try {
+                if (typeof QRCode !== 'undefined') {
+                    // Utiliser la vraie librairie QRCode
+                    await QRCode.toCanvas(canvas, content, {
+                        width: size,
+                        margin: 2,
+                        color: {
+                            dark: qrColor,
+                            light: bgColor
+                        },
+                        errorCorrectionLevel: 'M'
+                    });
+                } else {
+                    // Fallback avec API externe
+                    const qrImg = await generateQRFallback(content, size, qrColor, bgColor);
+                    const ctx = canvas.getContext('2d');
+                    ctx.fillStyle = bgColor;
+                    ctx.fillRect(0, 0, size, size);
+                    ctx.drawImage(qrImg, 0, 0, size, size);
+                }
+
+                // Ajouter le logo si présent
+                if (logoImage) {
+                    addLogoToCanvas(canvas);
+                }
+            } catch (error) {
+                console.error('Erreur génération QR:', error);
+                showQRError(canvas);
+            }
+        }
+
+        // Fallback avec API externe
+        function generateQRFallback(text, size, dark, light) {
+            return new Promise((resolve, reject) => {
+                const encodedText = encodeURIComponent(text);
+                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodedText}&color=${dark.replace('#', '')}&bgcolor=${light.replace('#', '')}&format=png&ecc=M`;
+                
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.onload = () => resolve(img);
+                img.onerror = reject;
+                img.src = qrUrl;
+            });
+        }
+
+        // Afficher erreur sur canvas
+        function showQRError(canvas) {
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#f3f4f6';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#ef4444';
+            ctx.font = '16px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('Erreur de génération', canvas.width/2, canvas.height/2 - 10);
+            ctx.fillText('Vérifiez votre connexion', canvas.width/2, canvas.height/2 + 10);
+        }
+
+        async function generatePreviewQR() {
+            // Générer un QR de prévisualisation
+            await generateQRCode('https://example.com/preview');
+        }
+
+        function addLogoToCanvas(canvas) {
+            const ctx = canvas.getContext('2d');
+            const logoSizePercent = parseInt(document.getElementById('logoSize').value);
+            const logoSize = (canvas.width * logoSizePercent) / 100;
+            const x = (canvas.width - logoSize) / 2;
+            const y = (canvas.height - logoSize) / 2;
+
+            // Fond blanc pour le logo
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(x - 5, y - 5, logoSize + 10, logoSize + 10);
+
+            // Dessiner le logo
+            ctx.drawImage(logoImage, x, y, logoSize, logoSize);
+        }
+
+        function updateRedirect() {
+            const editId = document.getElementById('editId').value;
+            const newUrl = document.getElementById('newUrl').value;
+            
+            if (!editId || !newUrl) {
+                alert('❌ Veuillez remplir l\'ID et la nouvelle URL');
+                return;
+            }
+            
+            if (!redirects[editId]) {
+                alert('❌ ID non trouvé');
+                return;
+            }
+            
+            redirects[editId] = newUrl;
+            localStorage.setItem('qrRedirects', JSON.stringify(redirects));
+            
+            // Sauvegarder dans le JSON
+            saveToJsonFile(editId, newUrl);
+            
+            alert('✅ Redirection mise à jour avec succès !');
+            document.getElementById('editId').value = '';
+            document.getElementById('newUrl').value = '';
+            displayRedirects();
+        }
+
+        function displayRedirects() {
+            const container = document.getElementById('redirectItems');
+            
+            if (Object.keys(redirects).length === 0) {
+                container.innerHTML = '<p style="color: #6b7280; text-align: center;">Aucun lien sauvegardé localement</p>';
+                return;
+            }
+            
+            container.innerHTML = '';
+            
+            Object.entries(redirects).forEach(([id, url]) => {
+                const item = document.createElement('div');
+                item.className = 'redirect-item';
+                item.innerHTML = `
+                    <div class="redirect-info">
+                        <div class="redirect-id">${id}</div>
+                        <div class="redirect-url">${url}</div>
+                    </div>
+                    <div class="redirect-actions">
+                        <button class="btn btn-success btn-small" onclick="editRedirect('${id}', '${url}')">✏️ Modifier</button>
+                        <button class="btn btn-danger btn-small" onclick="deleteRedirect('${id}')">🗑️ Supprimer</button>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        function editRedirect(id, currentUrl) {
+            document.getElementById('editId').value = id;
+            document.getElementById('newUrl').value = currentUrl;
+        }
+
+        function deleteRedirect(id) {
+            if (confirm('Êtes-vous sûr de vouloir supprimer cette redirection ?')) {
+                delete redirects[id];
+                localStorage.setItem('qrRedirects', JSON.stringify(redirects));
+                displayRedirects();
+            }
+        }
+
+        function copyToClipboard(elementId) {
+            const element = document.getElementById(elementId);
+            const text = element.textContent || element.value;
+            
+            navigator.clipboard.writeText(text).then(() => {
+                alert('📋 Copié dans le presse-papiers !');
+            });
+        }
+
+        function downloadQR() {
+            const canvas = document.getElementById('qrCanvas');
+            const link = document.createElement('a');
+            link.download = 'qr-code-dynamique.png';
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+    </script>
+</body>
+</html>
